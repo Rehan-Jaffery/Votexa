@@ -1,0 +1,10 @@
+Flask
+Flask-Cors
+Flask-SQLAlchemy
+Flask-JWT-Extended
+pymysql
+python-dotenv
+werkzeug
+pandas
+openpyxl
+Flask-Mail

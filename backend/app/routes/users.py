@@ -1,0 +1,136 @@
+from flask import Blueprint, request, jsonify
+from flask_jwt_extended import jwt_required, get_jwt
+from werkzeug.security import generate_password_hash
+import pandas as pd
+import secrets
+import string
+from flask_mail import Message
+from app.extensions import db, mail
+from app.models import Student
+
+users_bp = Blueprint("users", __name__)
+
+def generate_random_password(length=8):
+    alphabet = string.ascii_letters + string.digits
+    return ''.join(secrets.choice(alphabet) for i in range(length))
+
+def send_credentials_email(student_email, name, uid, password):
+    try:
+        msg = Message(
+            subject="VOTEXA Login Credentials",
+            recipients=[student_email],
+            body=f"""Hello {name},
+            
+Your account has been created on VOTEXA.
+    
+    Login ID: {uid}
+    Password: {password}
+
+Please log in and change your password immediately.
+
+Regards,
+VOTEXA Team
+"""
+        )
+        mail.send(msg)
+        return True
+    except Exception as e:
+        print(f"Failed to send email to {student_email}: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+@users_bp.route("/upload", methods=["POST"])
+@jwt_required()
+def upload_students():
+    claims = get_jwt()
+    if claims.get("role") != "admin":
+        return jsonify({"error": "Admin access only"}), 403
+
+    if 'file' not in request.files:
+        return jsonify({"error": "No file part"}), 400
+    
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({"error": "No selected file"}), 400
+
+    try:
+        if file.filename.endswith('.csv'):
+            df = pd.read_csv(file)
+        else:
+            df = pd.read_excel(file)
+        
+        # Validate columns (Added semester, password)
+        # Note: password is optional in the logic below, but good to have column present even if empty
+        # allowing flexible column check or just strict
+        
+        added_count = 0
+        email_count = 0
+        errors = []
+
+        for index, row in df.iterrows():
+            uid = str(row['university_id']).strip()
+            email = str(row['email']).strip()
+            semester = str(row.get('semester', '1')).strip() # Default to 1 if missing
+            
+            # Read role (Restrict Admin creation)
+            role = str(row.get('role', 'student')).lower()
+            if role == 'admin':
+                role = 'student' # Force admin to student
+            
+            valid_roles = ['student', 'cr', 'president', 'vice_president', 'secretary', 'joint_secretary']
+            if role not in valid_roles:
+                role = 'student'
+            
+            if Student.query.filter_by(university_id=uid).first():
+                errors.append(f"Row {index+2}: ID {uid} exists.")
+                continue
+                
+            if Student.query.filter_by(email=email).first():
+                errors.append(f"Row {index+2}: Email {email} exists.")
+                continue
+
+            # Password Logic
+            provided_password = str(row.get('password', '')).strip()
+            if provided_password and provided_password.lower() != 'nan':
+                 final_password = provided_password
+                 # Optional: Send email saying "Account created, use provided password"
+                 should_send_email = True 
+            else:
+                 final_password = generate_random_password()
+                 should_send_email = True
+
+            try:
+                new_student = Student(
+                    university_id=uid,
+                    name=row['name'],
+                    course=row['course'],
+                    batch=str(row['batch']),
+                    semester=semester,
+                    email=email,
+                    password_hash=generate_password_hash(final_password),
+                    role=role,
+                    is_password_changed=False
+                )
+                db.session.add(new_student)
+                added_count += 1
+                
+                # Send Email
+                if should_send_email:
+                    if send_credentials_email(email, row['name'], uid, final_password):
+                        email_count += 1
+                    
+            except Exception as e:
+                errors.append(f"Row {index+2}: Error adding {uid} - {str(e)}")
+
+        db.session.commit()
+        
+        return jsonify({
+            "message": f"Added {added_count} students. Sent {email_count} emails.",
+            "errors": errors
+        }), 201
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500

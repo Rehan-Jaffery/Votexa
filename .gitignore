@@ -1,0 +1,19 @@
+# System
+.DS_Store
+Thumbs.db
+
+# Environments & Dependencies
+backend/venv/
+backend/.env
+node_modules/
+frontend/dist/
+frontend/node_modules/
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+
+# Uploads & Temp
+uploaded_files/
+backend/instance/

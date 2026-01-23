@@ -1,11 +1,11 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from sqlalchemy import func
-from utils.election_utils import auto_close_election
+from app.utils.election_utils import auto_close_election
 
 
-from extensions import db
-from models import Vote, Election, Candidate, Student
+from app.extensions import db
+from app.models import Vote, Election, Candidate, Student
 
 vote_bp = Blueprint("vote", __name__)
 
@@ -37,7 +37,7 @@ def cast_vote():
         return jsonify({"error": "Election not found"}), 404
     
 
-    from utils.election_utils import auto_close_election
+    from app.utils.election_utils import auto_close_election
 
     # Check election status
     if election.status != "ONGOING":

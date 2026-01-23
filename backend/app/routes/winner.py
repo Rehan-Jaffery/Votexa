@@ -2,9 +2,9 @@ from flask import Blueprint, jsonify
 from flask_jwt_extended import jwt_required, get_jwt
 from sqlalchemy import func
 
-from extensions import db
-from models import Vote, Candidate, Student, Election
-from utils.election_utils import auto_close_election
+from app.extensions import db
+from app.models import Vote, Candidate, Student, Election
+from app.utils.election_utils import auto_close_election
 
 winner_bp = Blueprint("winner", __name__)
 

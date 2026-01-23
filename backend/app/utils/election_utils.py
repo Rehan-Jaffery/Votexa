@@ -1,6 +1,6 @@
 from datetime import datetime
-from models import Election
-from extensions import db
+from app.models import Election
+from app.extensions import db
 
 def auto_close_election(election_id):
     election = Election.query.get(election_id)

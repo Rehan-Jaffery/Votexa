@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify
 from flask_jwt_extended import jwt_required, get_jwt
-from models import Vote
-from extensions import db
+from app.models import Vote
+from app.extensions import db
 
 results_bp = Blueprint("results", __name__)
 

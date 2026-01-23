@@ -1,4 +1,4 @@
-from extensions import db
+from .extensions import db
 from datetime import datetime
 
 
@@ -13,11 +13,41 @@ class Student(db.Model):
     name = db.Column(db.String(100), nullable=False)
     course = db.Column(db.String(50), nullable=False)
     batch = db.Column(db.String(10), nullable=False)
+    semester = db.Column(db.String(10), nullable=False, default="1") # Added Semester
     role = db.Column(
-        db.Enum("student", "cr", "admin"),
+        db.Enum("student", "cr", "admin", "president", "vice_president", "secretary", "joint_secretary"),
         default="student",
         nullable=False
     )
+    email = db.Column(db.String(120), unique=True, nullable=True)
+    is_password_changed = db.Column(db.Boolean, default=False)
+    password_hash = db.Column(db.String(256), nullable=False)
+
+# =========================
+# CANDIDATE APPLICATION
+# =========================
+class CandidateApplication(db.Model):
+    __tablename__ = "applications"
+
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey("students.student_id"), nullable=False)
+    
+    post = db.Column(db.String(50), nullable=False) # CR, Vice President, etc.
+    manifesto = db.Column(db.Text, nullable=False)
+    reason = db.Column(db.Text, nullable=False)
+    
+    gpa = db.Column(db.String(10), nullable=True) # Allow "NA"
+    achievements = db.Column(db.Text, nullable=True)
+    
+    status = db.Column(
+        db.Enum("PENDING", "APPROVED", "REJECTED"),
+        default="PENDING"
+    )
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationship to access student details easily
+    student = db.relationship("Student", backref="applications")
 
 
 # =========================
@@ -33,6 +63,7 @@ class Election(db.Model):
     )
     course = db.Column(db.String(50))
     batch = db.Column(db.String(10))
+    semester = db.Column(db.String(10)) # Added Semester
     post = db.Column(
         db.Enum("Vice President", "Secretary", "Joint Secretary")
     )
