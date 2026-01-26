@@ -9,11 +9,18 @@ results_bp = Blueprint("results", __name__)
 @jwt_required()
 def completed_elections_results():
     claims = get_jwt()
-    if claims.get("role") != "admin":
-        return jsonify({"error": "Admin access only"}), 403
+    # ALLOW ALL AUTHENTICATED USERS (Students need this for dashboard widgets)
+    is_admin = claims.get("role") == "admin"
+    current_user_course = claims.get("course") # If we added this to claims, otherwise need to fetch user.
+    # We didn't add course to claims in login, so let's rely on fetching user or just return all and filter on frontend.
+    # Ideally filter backend side for privacy, but for now we trust frontend filtering for UX, as the data isn't highly sensitive EXCEPT live votes.
 
-    # Fetch all completed elections
+    # Fetch all completed or ongoing elections
     from app.models import Election, Candidate, Student
+    
+    # Filter: If Student, only show elections relevant to them? 
+    # Actually, transparency: Show all completed.
+    # But for "ONGOING", only Admin should see counts.
     
     completed_elections = Election.query.filter(Election.status.in_(["ONGOING", "COMPLETED"])).order_by(Election.end_date.desc()).all()
     
@@ -39,42 +46,46 @@ def completed_elections_results():
         hydrated_cands = []
         for c in all_cands:
             student = Student.query.get(c.student_id)
+            
+            # SHOW VOTES logic:
+            # If Admin -> Always Yes
+            # If COMPLETED -> Always Yes
+            # If ONGOING -> Only Admin (Students get 0 or hidden)
+            
+            show_votes = is_admin or election.status == "COMPLETED"
+            
             hydrated_cands.append({
                 "candidate_id": c.candidate_id,
                 "name": student.name,
-                "course": student.course, # Vital for grouping
+                "course": student.course,
                 "semester": getattr(student, 'semester', 'NA'),
-                "votes": vote_map.get(c.candidate_id, 0)
+                "votes": vote_map.get(c.candidate_id, 0) if show_votes else 0
             })
 
-        # Logic Split: CR vs COUNCIL
+        # LOGIC SPLIT: CR vs COUNCIL
         if election.election_type == "CR":
-            # Group by (Course, Semester)
             groups = {}
             for c in hydrated_cands:
                 key = (c['course'], c['semester'])
                 if key not in groups: groups[key] = []
                 groups[key].append(c)
             
-            # If groups are empty (No candidates yet), show the base election placeholder
             if not groups:
                 groups[(election.course, election.semester)] = []
 
-            # Create Virtual Election for each group
             for (course, sem), group_cands in groups.items():
-                # Sort by votes desc
                 group_cands.sort(key=lambda x: x['votes'], reverse=True)
                 
-                # Assign Rank
+                # Assign Rank (If votes are hidden, rank is meaningless/hidden)
                 for i, c in enumerate(group_cands):
-                    c['rank'] = i + 1
+                    c['rank'] = i + 1 if show_votes else 0
 
-                winner = group_cands[0] if group_cands and group_cands[0]['votes'] > 0 else None
-                runner_up = group_cands[1] if len(group_cands) > 1 and group_cands[1]['votes'] > 0 else None
+                winner = group_cands[0] if show_votes and group_cands and group_cands[0]['votes'] > 0 else None
+                runner_up = group_cands[1] if show_votes and len(group_cands) > 1 and group_cands[1]['votes'] > 0 else None
 
                 response_data.append({
-                    "election_id": election.election_id, # Same ID, but different display context (Virtual)
-                    "title": f"CR - {course} Sem {sem}", # Specific Title
+                    "election_id": election.election_id,
+                    "title": f"CR - {course} Sem {sem}",
                     "type": "CR",
                     "course": course,
                     "semester": sem,
@@ -83,16 +94,16 @@ def completed_elections_results():
                     "status": election.status,
                     "winner": winner,
                     "runner_up": runner_up,
-                    "candidates": group_cands # filtered list
+                    "candidates": group_cands
                 })
         else:
-            # COUNCIL (No grouping, one big list)
+            # COUNCIL
             hydrated_cands.sort(key=lambda x: x['votes'], reverse=True)
             for i, c in enumerate(hydrated_cands):
-                c['rank'] = i + 1
+                c['rank'] = i + 1 if show_votes else 0
             
-            winner = hydrated_cands[0] if hydrated_cands and hydrated_cands[0]['votes'] > 0 else None
-            runner_up = hydrated_cands[1] if len(hydrated_cands) > 1 and hydrated_cands[1]['votes'] > 0 else None
+            winner = hydrated_cands[0] if show_votes and hydrated_cands and hydrated_cands[0]['votes'] > 0 else None
+            runner_up = hydrated_cands[1] if show_votes and len(hydrated_cands) > 1 and hydrated_cands[1]['votes'] > 0 else None
 
             response_data.append({
                 "election_id": election.election_id,

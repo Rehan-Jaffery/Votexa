@@ -55,7 +55,10 @@ def login():
         "user": {
             "name": student.name,
             "university_id": student.university_id,
-            "role": student.role
+            "role": student.role,
+            "course": student.course,
+            "semester": student.semester,
+            "batch": student.batch,
         }
     }), 200
 

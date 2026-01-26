@@ -184,8 +184,8 @@ const ManageElections = () => {
                                                     <option value="MCA" style={{ color: 'black' }}>MCA</option>
                                                     <option value="Msc Aiml" style={{ color: 'black' }}>Msc Aiml</option>
                                                     <option value="Msc Bioinformatics" style={{ color: 'black' }}>Msc Bioinformatics</option>
-                                                    <option value="Bsc CS" style={{ color: 'black' }}>Bsc CS</option>
                                                     <option value="PGDCA" style={{ color: 'black' }}>PGDCA</option>
+                                                    <option value="BSc" style={{ color: 'black' }}>BSc</option>
                                                 </select>
                                             </div>
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
