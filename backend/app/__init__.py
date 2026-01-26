@@ -20,13 +20,15 @@ def create_app():
     app.register_blueprint(elections_bp, url_prefix="/api/elections")
 
     from .routes.votes import vote_bp
-    app.register_blueprint(vote_bp, url_prefix="/api")
+    app.register_blueprint(vote_bp, url_prefix="/api/votes")
+    
+
 
     from .routes.analytics import analytics_bp
     app.register_blueprint(analytics_bp, url_prefix="/api")
 
     from .routes.results import results_bp
-    app.register_blueprint(results_bp, url_prefix="/api")
+    app.register_blueprint(results_bp, url_prefix="/api/results")
 
     from .routes.users import users_bp
     app.register_blueprint(users_bp, url_prefix="/api/users")

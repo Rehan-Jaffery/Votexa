@@ -40,6 +40,8 @@ def submit_application():
     if existing:
         return jsonify({"error": "You already have a pending application"}), 400
 
+    print(f"Applying: User={user.name}, Post={post}, Data={data}")
+
     new_app = CandidateApplication(
         student_id=student_id,
         post=post,
@@ -47,13 +49,153 @@ def submit_application():
         reason=data.get("reason", ""),
         gpa=data.get("gpa", "NA"),
         achievements=data.get("achievements", ""),
+        additional_details=data.get("additional_details", {}),
         status="PENDING"
     )
     
-    db.session.add(new_app)
+    try:
+        db.session.add(new_app)
+        db.session.commit()
+        return jsonify({"message": "Application submitted successfully!"}), 201
+    except Exception as e:
+        db.session.rollback()
+        print(f"DB Error during application submit: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": f"Database Error: {str(e)}"}), 500
+
+# ============================
+# GET MY APPLICATION
+# ============================
+@applications_bp.route("/<int:app_id>", methods=["DELETE"])
+@jwt_required()
+def delete_application(app_id):
+    claims = get_jwt()
+    if claims.get("role") != "admin":
+        return jsonify({"error": "Admin access only"}), 403
+        
+    app_record = CandidateApplication.query.get(app_id)
+    if not app_record:
+        return jsonify({"error": "Application not found"}), 404
+        
+    # Also remove candidate if exists
+    cand = Candidate.query.filter_by(student_id=app_record.student_id).first()
+    if cand:
+        db.session.delete(cand)
+        
+    db.session.delete(app_record)
     db.session.commit()
+    return jsonify({"message": "Application deleted successfully"}), 200
+
+# ============================
+# GET MY APPLICATION
+# ============================
+@applications_bp.route("/me", methods=["GET"])
+@jwt_required()
+def get_my_application():
+    student_id = get_jwt_identity()
     
-    return jsonify({"message": "Application submitted successfully!"}), 201
+    # Logic Update: Only return application if it is relevant to an Active Election context
+    # Case 1: Student is an Active Candidate (in UPCOMING or ONGOING election)
+    active_candidate = Candidate.query.filter_by(student_id=student_id).join(Election).filter(
+        Election.status.in_(["UPCOMING", "ONGOING"])
+    ).first()
+    
+    if active_candidate:
+        # Return the APPROVED application corresponding to this
+        # Assuming one active application per student roughly
+        app = CandidateApplication.query.filter_by(student_id=student_id, status="APPROVED").order_by(CandidateApplication.created_at.desc()).first()
+        if app:
+             return jsonify({
+                "id": app.id,
+                "post": app.post,
+                "status": "APPROVED", # Force approved status if candidate exists
+                "created_at": app.created_at.strftime("%Y-%m-%d"),
+                "manifesto": app.manifesto
+            }), 200
+
+    # Case 2: Student has a PENDING application (not yet a Candidate, or Rejected but trying again? No, if Rejected it sits until new one)
+    # Actually, allow showing REJECTED if it is recent?
+    # User Request: "Apply position tab should reset to default when election ends"
+    # So if previous election ended, show nothing.
+    
+    # Just look for PENDING apps.
+    pending_app = CandidateApplication.query.filter_by(student_id=student_id, status="PENDING").first()
+    if pending_app:
+        return jsonify({
+            "id": pending_app.id,
+            "post": pending_app.post,
+            "status": "PENDING",
+            "created_at": pending_app.created_at.strftime("%Y-%m-%d"),
+            "manifesto": pending_app.manifesto
+        }), 200
+        
+    # Case 3: REJECTED?
+    # If the user was rejected for an UPCOMING/ONGOING election, show "Rejected".
+    # If election is over, show nothing.
+    # We don't link App to Election directly.
+    # Simple Heuristic: Return latest App. If it is "APPROVED" but no active candidate record (meaning election finished), return None.
+    # If it is "REJECTED", and created recently?
+    
+    # Revised Logic:
+    # 1. Fetch Latest App.
+    # 2. If PENDING -> Return it.
+    # 3. If APPROVED -> Check if Candidate Record exists and is tied to Active Election. If yes -> Return. Else -> Return None (Reset).
+    # 4. If REJECTED -> Return it (User sees rejection). But when can they apply again? 
+    #    If they want to apply again, they must likely wait or the UI handles it?
+    #    Actually, if Rejected, they should be able to apply again if there is a NEW election?
+    #    Let's just return None if the application is "Old".
+    #    How to define Old?
+    #    Let's stick to the Candidate check for Approval.
+    
+    latest_app = CandidateApplication.query.filter_by(student_id=student_id).order_by(CandidateApplication.created_at.desc()).first()
+    
+    if not latest_app:
+        return jsonify(None), 200
+        
+    if latest_app.status == "PENDING":
+        return jsonify({
+            "id": latest_app.id, 
+            "post": latest_app.post, 
+            "status": "PENDING", 
+            "created_at": latest_app.created_at.strftime("%Y-%m-%d"), 
+            "manifesto": latest_app.manifesto
+        }), 200
+        
+    if latest_app.status == "APPROVED":
+        # Check if still an active candidate
+        is_active = Candidate.query.filter_by(student_id=student_id).join(Election).filter(
+            Election.status.in_(["UPCOMING", "ONGOING"])
+        ).first()
+        
+        if is_active:
+             return jsonify({
+                "id": latest_app.id, 
+                "post": latest_app.post, 
+                "status": "APPROVED", 
+                "created_at": latest_app.created_at.strftime("%Y-%m-%d"), 
+                "manifesto": latest_app.manifesto
+            }), 200
+        else:
+            # Election finished (Completed)
+            return jsonify(None), 200 # Reset form
+            
+    if latest_app.status == "REJECTED":
+        # Check date? Or just show Rejected.
+        # User implies if election ends, reset.
+        # If I was rejected for Election A, and Election A ends, I should see Default.
+        # But I don't know if Election A ended.
+        # Assume if "REJECTED", show it. User can perhaps "Dismiss" it? 
+        # Or just show it for now.
+         return jsonify({
+            "id": latest_app.id, 
+            "post": latest_app.post, 
+            "status": "REJECTED", 
+            "created_at": latest_app.created_at.strftime("%Y-%m-%d"), 
+            "manifesto": latest_app.manifesto
+        }), 200
+
+    return jsonify(None), 200
 
 # ============================
 # LIST APPLICATIONS (ADMIN)
@@ -77,7 +219,11 @@ def list_applications():
             "post": a.post,
             "gpa": a.gpa,
             "status": a.status,
-            "created_at": a.created_at.strftime("%Y-%m-%d")
+            "created_at": a.created_at.strftime("%Y-%m-%d"),
+            "manifesto": a.manifesto,
+            "reason": a.reason,
+            "achievements": a.achievements,
+            "additional_details": a.additional_details
         })
         
     return jsonify(data), 200
@@ -120,16 +266,32 @@ def update_application_status(app_id):
         
         election_type = post_map.get(app_record.post, "COUNCIL")
         
-        query = Election.query.filter_by(status="UPCOMING", election_type=election_type)
+        query = Election.query.filter(
+            Election.election_type == election_type,
+            Election.status.in_(["UPCOMING", "ONGOING"])
+        )
         
         if election_type == "CR":
-            # Filter by batch/course
-            query = query.filter_by(course=app_record.student.course, batch=app_record.student.batch)
+            # 1. Try finding specific election first (Match Course + Semester - Case Insensitive)
+            from sqlalchemy import func
+            specific = query.filter(
+                func.lower(Election.course) == func.lower(app_record.student.course),
+                Election.semester == app_record.student.semester
+            ).first()
+            if specific:
+                election = specific
+            else:
+                # 2. Key change: Look for Generic CR election (course is None OR empty)
+                # Re-query without filters
+                election = Election.query.filter(
+                    Election.status.in_(["UPCOMING", "ONGOING"]),
+                    Election.election_type == "CR",
+                    (Election.course == None) | (Election.course == "")
+                ).first()
         else:
             # Filter by specific post
             query = query.filter_by(post=app_record.post)
-            
-        election = query.first()
+            election = query.first()
         
         if election:
             # Check if already candidate
@@ -145,6 +307,13 @@ def update_application_status(app_id):
                 msg += ". User is already a candidate."
         else:
              msg += ". No active election found for this post."
+
+    elif new_status == "REJECTED":
+        # Remove from candidates table if exists
+        cand = Candidate.query.filter_by(student_id=app_record.student_id).first()
+        if cand:
+            db.session.delete(cand)
+            msg += ". Candidate removed from election."
 
     db.session.commit()
     return jsonify({"message": msg}), 200

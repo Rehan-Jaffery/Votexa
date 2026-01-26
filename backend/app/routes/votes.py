@@ -37,7 +37,7 @@ def cast_vote():
         return jsonify({"error": "Election not found"}), 404
     
 
-    from app.utils.election_utils import auto_close_election
+    # from app.utils.election_utils import auto_close_election
 
     # Check election status
     if election.status != "ONGOING":

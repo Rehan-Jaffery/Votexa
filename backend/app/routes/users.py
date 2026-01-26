@@ -134,3 +134,51 @@ def upload_students():
         import traceback
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
+
+@users_bp.route("/", methods=["GET"])
+@jwt_required()
+def list_users():
+    claims = get_jwt()
+    if claims.get("role") != "admin":
+        return jsonify({"error": "Admin access only"}), 403
+
+    students = Student.query.all()
+    data = []
+    for s in students:
+        if s.role == 'admin': continue # Don't list super admin
+        data.append({
+            "student_id": s.student_id,
+            "university_id": s.university_id,
+            "name": s.name,
+            "course": s.course,
+            "batch": s.batch,
+            "semester": s.semester,
+            "email": s.email,
+            "role": s.role
+        })
+    
+    return jsonify(data), 200
+
+@users_bp.route("/<int:student_id>", methods=["DELETE"])
+@jwt_required()
+def delete_user(student_id):
+    claims = get_jwt()
+    if claims.get("role") != "admin":
+        return jsonify({"error": "Admin access only"}), 403
+
+    student = Student.query.get(student_id)
+    if not student:
+        return jsonify({"error": "User not found"}), 404
+        
+    # Prevent deleting self (Admin)
+    identity_id = int(claims.get("sub")) # sub is student_id in string
+    if student.student_id == identity_id:
+         return jsonify({"error": "Cannot delete yourself"}), 400
+
+    try:
+        db.session.delete(student)
+        db.session.commit()
+        return jsonify({"message": "User deleted successfully"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"Failed to delete: {str(e)}"}), 500

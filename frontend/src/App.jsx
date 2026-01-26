@@ -9,7 +9,9 @@ import VotePage from "./pages/VotePage";
 import ManageUsers from "./pages/ManageUsers";
 import Profile from "./pages/Profile";
 import ApplyPage from "./pages/ApplyPage";
+import ManageElections from "./pages/ManageElections";
 import ManageApplications from "./pages/ManageApplications";
+import ElectionResults from "./pages/ElectionResults";
 
 function App() {
   return (
@@ -24,8 +26,11 @@ function App() {
         <Route path="users" element={<ManageUsers />} />
         <Route path="profile" element={<Profile />} />
         <Route path="vote" element={<VotePage />} />
-        <Route path="elections" element={<div>Manage Elections (Coming Soon)</div>} />
+        <Route path="elections" element={<ManageElections />} />
         <Route path="class-stats" element={<div>Class Stats (Coming Soon)</div>} />
+        <Route path="apply" element={<ApplyPage />} />
+        <Route path="applications" element={<ManageApplications />} />
+        <Route path="results" element={<ElectionResults />} />
       </Route>
     </Routes>
   );

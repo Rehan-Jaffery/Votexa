@@ -108,6 +108,12 @@ const Sidebar = ({ role, mobileOpen, onClose }) => {
                             >
                                 📋 Review Applications
                             </button>
+                            <button
+                                className={`nav-item ${isActive("/dashboard/results") ? "active" : ""}`}
+                                onClick={() => { navigate("/dashboard/results"); onClose?.(); }}
+                            >
+                                🏆 Election Results
+                            </button>
                         </>
                     )}
 

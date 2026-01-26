@@ -24,6 +24,7 @@ with app.app_context():
         print("Admin user created.")
     else:
         # For testing, reset flag if exists
+        admin.password_hash = generate_password_hash("admin123")
         admin.is_password_changed = False
         db.session.commit()
-        print("Admin user already exists. Reset password change flag for testing.")
+        print("Admin user already exists. **PASSWORD RESET to admin123**.")

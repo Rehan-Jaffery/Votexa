@@ -27,6 +27,14 @@ def login():
         return jsonify({"error": "University ID is required"}), 400
 
     student = Student.query.filter_by(university_id=university_id).first()
+    
+    print(f"Login Attempt: {university_id}")
+    if student:
+        print(f"User Found: {student.name}, Hash: {student.password_hash}")
+        is_valid = check_password_hash(student.password_hash, data.get("password") or "")
+        print(f"Password Valid: {is_valid}")
+    else:
+        print("User NOT Found")
 
     if not student or not check_password_hash(student.password_hash, data.get("password") or ""):
         return jsonify({"error": "Invalid credentials"}), 401

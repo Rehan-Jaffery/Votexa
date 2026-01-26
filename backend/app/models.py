@@ -38,6 +38,7 @@ class CandidateApplication(db.Model):
     
     gpa = db.Column(db.String(10), nullable=True) # Allow "NA"
     achievements = db.Column(db.Text, nullable=True)
+    additional_details = db.Column(db.JSON, nullable=True) # For Agenda, Vision, Experience, etc.
     
     status = db.Column(
         db.Enum("PENDING", "APPROVED", "REJECTED"),
@@ -94,6 +95,9 @@ class Candidate(db.Model):
         db.ForeignKey("elections.election_id"),
         nullable=False
     )
+
+    student = db.relationship("Student", backref="candidates")
+    election = db.relationship("Election", backref="candidates")
 
 
 # =========================
