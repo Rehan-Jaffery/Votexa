@@ -23,14 +23,42 @@ def create_election():
     if election_type not in ["CR", "COUNCIL"]:
         return jsonify({"error": "Invalid election type"}), 400
 
+    start_date = datetime.strptime(data.get("start_date"), "%Y-%m-%dT%H:%M") if data.get("start_date") else None
+    end_date = datetime.strptime(data.get("end_date"), "%Y-%m-%dT%H:%M") if data.get("end_date") else None
+
+    # Handle Bulk Council Creation
+    if election_type == "COUNCIL" and data.get("post") == "All":
+        posts = ["Vice President", "Secretary", "Joint Secretary"]
+        created_ids = []
+        try:
+            for p in posts:
+                new_election = Election(
+                    election_type="COUNCIL",
+                    course=None,
+                    semester=None,
+                    post=p,
+                    start_date=start_date,
+                    end_date=end_date,
+                    status="UPCOMING"
+                )
+                db.session.add(new_election)
+                # Flush to get ID if needed, or commit at end
+            
+            db.session.commit() # Commit all
+            return jsonify({"message": "Council Elections created successfully (VP, Sec, Joint Sec)"}), 201
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({"error": str(e)}), 500
+
+    # Normal Creation (CR or specific post)
     new_election = Election(
         election_type=election_type,
         course=data.get("course"), # Optional
         # batch=data.get("batch"), # REMOVED per user request
         semester=data.get("semester"),
         post=data.get("post"),     # Only for COUNCIL
-        start_date=datetime.strptime(data.get("start_date"), "%Y-%m-%dT%H:%M") if data.get("start_date") else None,
-        end_date=datetime.strptime(data.get("end_date"), "%Y-%m-%dT%H:%M") if data.get("end_date") else None,
+        start_date=start_date,
+        end_date=end_date,
         status="UPCOMING" 
     )
 
@@ -174,6 +202,7 @@ def list_active_elections():
             # If Admin -> Skip constraints (Bypass)
             if user.role != "admin":
                  if e.course and e.course.lower() != user.course.lower(): continue
+                 if e.semester and e.semester != user.semester: continue
             
             data.append({
                 "election_id": e.election_id,
@@ -184,8 +213,20 @@ def list_active_elections():
                 "status": e.status,
                 "end_date": e.end_date.strftime("%Y-%m-%d %H:%M") if e.end_date else "TBD"
             })
+
         else:
-             data.append({
+            # COUNCIL ELECTIONS -> Only CRs can vote (and Admins can see)
+            # Check Role
+            if user.role != "cr" and user.role != "admin" and user.role != "president" and user.role != "vice_president": 
+                # (Existing council members might want to see? Assuming strictly CRs and Admin for voting context)
+                # User request: "all the cr's of all the batches should be able to apply and vote"
+                # If I am already VP, can I vote? Assuming yes if I am also a CR? 
+                # Usually Council members are elected FROM CRs. 
+                # I'll stick to 'cr' and 'admin' for now, plus existing council roles if they retain voting rights.
+                # Simplest: if user.role not in ['cr', 'admin']: continue
+                if user.role not in ['cr', 'admin']: continue
+
+            data.append({
                 "election_id": e.election_id,
                 "title": f"Council - {e.post}",
                 "type": "COUNCIL",
@@ -236,6 +277,8 @@ def list_candidates(id):
     candidates = query.all()
     data = []
     for c in candidates:
+        app = CandidateApplication.query.filter_by(student_id=c.student_id, status="APPROVED").first()
+        manifesto = app.manifesto if app else "No manifesto provided."
         data.append({
             "candidate_id": c.candidate_id,
             "student_id": c.student.university_id,
@@ -243,7 +286,8 @@ def list_candidates(id):
             "course": c.student.course,
             "batch": c.student.batch,
             "semester": c.student.semester,
-            "post": c.student.role 
+            "post": c.student.role,
+            "manifesto": manifesto
         })
     return jsonify(data), 200
 
@@ -285,3 +329,30 @@ def debug_candidates_public(id):
             "name": c.student.name if c.student else "No Student Linked"
         })
     return jsonify({"count": len(data), "candidates": data}), 200
+
+@elections_bp.route("/upcoming-events", methods=["GET"])
+@jwt_required()
+def upcoming_events():
+    """Returns next 3 upcoming elections. Visible to Council & Admin."""
+    claims = get_jwt()
+    role = claims.get("role")
+    
+    # Allowed: Admin, VP, Sec, J-Sec. (Maybe CRs too? For now Council+Admin)
+    allowed_roles = ["admin", "president", "vice_president", "secretary", "joint_secretary", "cr"]
+    if role not in allowed_roles:
+        return jsonify({"message": "Access denied"}), 403
+
+    # Fetch UPCOMING elections sort by start_date ASC
+    elections = Election.query.filter_by(status="UPCOMING").order_by(Election.start_date.asc()).limit(3).all()
+    
+    data = []
+    for e in elections:
+        title = e.post if e.election_type == "COUNCIL" else f"CR {e.course} ({e.semester})"
+        data.append({
+            "id": e.election_id,
+            "title": title,
+            "start_date": e.start_date.strftime("%d %b, %I:%M %p") if e.start_date else "TBD",
+            "type": "ELECTION"
+        })
+        
+    return jsonify(data), 200

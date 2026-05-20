@@ -57,6 +57,7 @@ def completed_elections_results():
             hydrated_cands.append({
                 "candidate_id": c.candidate_id,
                 "name": student.name,
+                "email": student.email,
                 "course": student.course,
                 "semester": getattr(student, 'semester', 'NA'),
                 "votes": vote_map.get(c.candidate_id, 0) if show_votes else 0

@@ -39,7 +39,7 @@ const ManageElections = () => {
                 election_type: type,
                 course: type === "CR" ? course : null,
                 semester: type === "CR" ? semester : null,
-                post: type === "COUNCIL" ? post : null,
+                post: type === "COUNCIL" ? "All" : null,
                 start_date: startDate,
                 end_date: endDate
             });
@@ -198,14 +198,15 @@ const ManageElections = () => {
                             )}
 
                             {type === "COUNCIL" && (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                    <label style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Post</label>
-                                    <select value={post} onChange={e => setPost(e.target.value)} style={{ padding: '12px', borderRadius: '8px', background: 'var(--input-bg)', color: 'var(--text-main)', border: '1px solid var(--glass-border)' }}>
-                                        <option value="">Select Post</option>
-                                        <option value="Vice President" style={{ color: 'black' }}>Vice President</option>
-                                        <option value="Secretary" style={{ color: 'black' }}>Secretary</option>
-                                        <option value="Joint Secretary" style={{ color: 'black' }}>Joint Secretary</option>
-                                    </select>
+                                <div style={{ background: 'var(--input-bg)', padding: '15px', borderRadius: '8px', border: '1px solid var(--glass-border)' }}>
+                                    <p style={{ margin: 0, color: 'var(--text-main)', fontSize: '0.95rem' }}>
+                                        This will automatically open 3 separate elections for:
+                                    </p>
+                                    <ul style={{ margin: '10px 0 0 0', paddingLeft: '20px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                                        <li>Vice President</li>
+                                        <li>Secretary</li>
+                                        <li>Joint Secretary</li>
+                                    </ul>
                                 </div>
                             )}
 

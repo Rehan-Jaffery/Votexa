@@ -3,13 +3,13 @@ import { useNavigate } from "react-router-dom";
 import api from "../services/api";
 import "./Login.css";
 import votexaLogo from "../assets/votexa logo.png";
+import { toast } from "react-hot-toast";
 
 function Login() {
   const [universityId, setUniversityId] = useState("");
   const [password, setPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
   const [theme, setTheme] = useState("dark");
 
   // New State for Password Change
@@ -26,7 +26,6 @@ function Login() {
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    setError("");
     setLoading(true);
 
     try {
@@ -45,12 +44,15 @@ function Login() {
       if (data.is_password_changed === false) {
         setNeedsPasswordChange(true);
         setLoading(false);
+        toast("Please set a new password.", { icon: "🔑" });
         return;
       }
 
+      toast.success("Welcome back!");
       navigate("/dashboard");
     } catch (err) {
-      setError(err.response?.data?.error || "Login failed");
+      console.error(err);
+      toast.error(err.response?.data?.error || "Login failed");
       setLoading(false);
     }
   };
@@ -58,20 +60,20 @@ function Login() {
   const handleChangePassword = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError("");
 
     try {
       await api.post("/auth/change-password", {
         new_password: newPassword
       });
-      alert("Password changed successfully! You can now access the dashboard.");
+      toast.success("Password updated! Redirecting...");
       navigate("/dashboard");
     } catch (err) {
-      setError(err.response?.data?.error || "Failed to update password");
+      toast.error(err.response?.data?.error || "Failed to update password");
     } finally {
       setLoading(false);
     }
   }
+
 
   const toggleTheme = () => {
     const newTheme = theme === "dark" ? "light" : "dark";
@@ -136,7 +138,7 @@ function Login() {
               />
             </div>
 
-            {error && <p className="error-text">{error}</p>}
+
 
             <button className="login-button" type="submit" disabled={loading}>
               {loading ? "Logging in..." : "Login"}
@@ -160,7 +162,7 @@ function Login() {
               />
             </div>
 
-            {error && <p className="error-text">{error}</p>}
+
 
             <button className="login-button" type="submit" disabled={loading}>
               {loading ? "Updating..." : "Set Password & Login"}

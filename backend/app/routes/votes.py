@@ -26,9 +26,9 @@ def cast_vote():
     student_id = int(get_jwt_identity())
     role = get_jwt().get("role")
 
-    # Only students can vote
-    if role != "student":
-        return jsonify({"error": "Only students can vote"}), 403
+    # Only students and CRs can vote
+    if role not in ["student", "cr"]:
+        return jsonify({"error": "Only students or CRs can vote"}), 403
 
     # Check election exists
     election = auto_close_election(election_id)
@@ -36,12 +36,30 @@ def cast_vote():
     if not election:
         return jsonify({"error": "Election not found"}), 404
     
-
-    # from app.utils.election_utils import auto_close_election
-
     # Check election status
     if election.status != "ONGOING":
         return jsonify({"error": "Voting is closed for this election"}), 403
+
+    # ROLE & ELIGIBILITY CHECK
+    if election.election_type == "COUNCIL":
+        # Only CRs (and maybe existing Council?) can vote
+        # Per request: "only all the cr's of all the batches should be able to apply and vote"
+        if role != "cr":
+             return jsonify({"error": "Only Class Representatives can vote in Council Elections"}), 403
+
+    elif election.election_type == "CR":
+        # Any student (or CR) can vote in their own class election
+        # Must match Course, Semester (and Batch if used)
+        user = Student.query.get(student_id)
+        
+        # Check constraints
+        if election.course and election.course.lower() != user.course.lower():
+             return jsonify({"error": "You cannot vote in another course's election"}), 403
+        
+        if election.semester and str(election.semester) != str(user.semester):
+             return jsonify({"error": "You cannot vote in another semester's election"}), 403
+
+    # Prevent duplicate voting
 
     # Prevent duplicate voting
     existing_vote = Vote.query.filter_by(

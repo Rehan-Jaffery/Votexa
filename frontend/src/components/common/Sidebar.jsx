@@ -77,7 +77,13 @@ const Sidebar = ({ role, mobileOpen, onClose }) => {
                         📊 Dashboard
                     </button>
 
-                    {/* ADMIN & COUNCIL ANALYTICS */}
+                    <button
+                        className={`nav-item ${isActive("/dashboard/notices") ? "active" : ""}`}
+                        onClick={() => { navigate("/dashboard/notices"); onClose?.(); }}
+                    >
+                        📢 Notices
+                    </button>
+
                     {(role === "admin" || isCouncil) && (
                         <button
                             className={`nav-item ${isActive("/dashboard/analytics") ? "active" : ""}`}

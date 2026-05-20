@@ -182,3 +182,65 @@ def delete_user(student_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": f"Failed to delete: {str(e)}"}), 500
+
+@users_bp.route("/<int:student_id>/role", methods=["PUT"])
+@jwt_required()
+def update_role(student_id):
+    claims = get_jwt()
+    if claims.get("role") != "admin":
+        return jsonify({"error": "Admin access only"}), 403
+
+    student = Student.query.get(student_id)
+    if not student:
+        return jsonify({"error": "User not found"}), 404
+
+    data = request.json
+    new_role = data.get("role")
+    
+    valid_updatable_roles = ["student", "cr", "president", "vice_president", "secretary", "joint_secretary"]
+    if new_role not in valid_updatable_roles:
+         return jsonify({"error": f"Invalid role. Allowed: {valid_updatable_roles}"}), 400
+
+    try:
+        student.role = new_role
+        db.session.commit()
+        return jsonify({"message": f"User role updated to {new_role}"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"Failed to update role: {str(e)}"}), 500
+
+@users_bp.route("/public-council", methods=["GET"])
+@jwt_required()
+def get_public_council():
+    # ALLOW ALL AUTHENTICATED USERS
+    
+    # 1. Fetch Council Members
+    council = Student.query.filter(Student.role.in_(["president", "vice_president", "secretary", "joint_secretary"])).all()
+    council_data = []
+    for c in council:
+        council_data.append({
+             "name": c.name,
+             "email": c.email,
+             "role": c.role,
+             "course": c.course, # Maybe useful
+             "semester": c.semester
+        })
+
+    # 2. Fetch CRs (Include Council members as they function as CRs too)
+    cr_roles = ["cr", "president", "vice_president", "secretary", "joint_secretary"]
+    crs = Student.query.filter(Student.role.in_(cr_roles)).all()
+    cr_data = []
+    for c in crs:
+        cr_data.append({
+             "name": c.name,
+             "email": c.email,
+             "role": c.role, # Pass actual role (e.g. 'vice_president' or 'cr')
+             "course": c.course,
+             "batch": c.batch,
+             "semester": c.semester
+        })
+        
+    return jsonify({
+        "council": council_data,
+        "crs": cr_data
+    }), 200

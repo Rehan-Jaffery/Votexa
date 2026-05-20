@@ -39,6 +39,13 @@ def create_app():
     from .routes.applications import applications_bp
     app.register_blueprint(applications_bp, url_prefix="/api/applications")
 
+    from .routes.announcements import announcement_bp
+    app.register_blueprint(announcement_bp, url_prefix="/api/announcements")
+
+    from .routes.class_stats import class_stats_bp
+    app.register_blueprint(class_stats_bp, url_prefix="/api/class-stats")
+
+
     @app.route("/")
     def home():
         return {"message": "VOTEXA Backend Running Successfully"}

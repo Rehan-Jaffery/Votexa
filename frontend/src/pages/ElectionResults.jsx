@@ -50,8 +50,9 @@ const ElectionResults = () => {
 
     return (
         <div className="vote-page-container animate-fade-in">
-            <h1>🏆 Past Election Results</h1>
-            <p style={{ color: 'var(--text-secondary)' }}>View details, winners, and statistics of completed elections.</p> // ... (rest of file)
+            <h1>🏆 Election Results</h1>
+            <p style={{ color: 'var(--text-secondary)' }}>View details, winners, and statistics of completed elections.</p>
+            <button onClick={fetchResults} style={{ marginBottom: '20px', padding: '8px', cursor: 'pointer' }}>🔄 Force Refresh Results</button>
 
             {/* LIVE ELECTIONS SECTION */}
             {results.some(e => e.status === 'ONGOING') && (
@@ -109,71 +110,71 @@ const ElectionResults = () => {
                                     {expandedElectionId === uniqueId && (
                                         <div className="animate-fade-in" style={{ padding: '20px', borderTop: '1px solid rgba(16, 185, 129, 0.3)' }}>
                                             {/* FULL TABLE */}
-                                            <div style={{ width: '100%' }}>
-                                                <h3 style={{ color: 'var(--text-main)', borderBottom: '1px solid var(--glass-border)', paddingBottom: '10px' }}>📊 Vote Breakdown</h3>
-                                                <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
-                                                    <table style={{ width: '100%', fontSize: '0.9rem', borderCollapse: 'collapse' }}>
-                                                        <thead>
-                                                            <tr style={{ textAlign: 'left', color: 'var(--text-secondary)' }}>
-                                                                <th style={{ padding: '8px' }}>Candidate</th>
-                                                                <th style={{ padding: '8px', textAlign: 'center' }}>Votes</th>
-                                                                <th style={{ padding: '8px', textAlign: 'center' }}>Rank</th>
-                                                                <th style={{ padding: '8px' }}>Status</th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody>
-                                                            {election.candidates.map((c, i) => {
-                                                                const leaderVotes = election.candidates[0]?.votes || 0;
-                                                                const nextVotes = election.candidates[1]?.votes || 0;
+                                            <div style={{ width: '100%', overflowX: 'auto' }}>
+                                                <table style={{ width: '100%', minWidth: '400px', fontSize: '0.9rem', borderCollapse: 'collapse' }}>
+                                                    <thead>
+                                                        <tr style={{ textAlign: 'left', color: 'var(--text-secondary)' }}>
+                                                            <th style={{ padding: '8px', whiteSpace: 'nowrap' }}>Candidate</th>
+                                                            <th style={{ padding: '8px', textAlign: 'center', whiteSpace: 'nowrap' }}>Votes</th>
+                                                            <th style={{ padding: '8px', textAlign: 'center', whiteSpace: 'nowrap' }}>Rank</th>
+                                                            <th style={{ padding: '8px', whiteSpace: 'nowrap' }}>Status</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {election.candidates.map((c, i) => {
 
-                                                                let statusText = "-";
-                                                                let statusColor = "var(--text-secondary)";
+                                                            const leaderVotes = election.candidates[0]?.votes || 0;
+                                                            const nextVotes = election.candidates[1]?.votes || 0;
 
-                                                                if (election.status === 'ONGOING') {
-                                                                    if (c.rank === 1) {
-                                                                        const margin = leaderVotes - nextVotes;
-                                                                        statusText = `Leading by ${margin}`;
-                                                                        statusColor = "#10b981"; // Green
-                                                                    } else {
-                                                                        const trailing = leaderVotes - c.votes;
-                                                                        statusText = `Trailing by ${trailing}`;
-                                                                        statusColor = "#f59e0b"; // Orange
-                                                                    }
+                                                            let statusText = "-";
+                                                            let statusColor = "var(--text-secondary)";
+
+                                                            if (election.status === 'ONGOING') {
+                                                                if (c.rank === 1) {
+                                                                    const margin = leaderVotes - nextVotes;
+                                                                    statusText = `Leading by ${margin}`;
+                                                                    statusColor = "#10b981"; // Green
                                                                 } else {
-                                                                    // COMPLETED
-                                                                    if (c.rank === 1) {
-                                                                        statusText = "🏆 Winner";
-                                                                        statusColor = "#fbbf24"; // Gold
-                                                                    } else if (c.rank === 2) {
-                                                                        statusText = "🥈 Runner Up";
-                                                                        statusColor = "var(--text-secondary)";
-                                                                    } else {
-                                                                        statusText = "Lost";
-                                                                        statusColor = "#ef4444"; // Red
-                                                                    }
+                                                                    const trailing = leaderVotes - c.votes;
+                                                                    statusText = `Trailing by ${trailing}`;
+                                                                    statusColor = "#f59e0b"; // Orange
                                                                 }
+                                                            } else {
+                                                                // COMPLETED
+                                                                if (c.rank === 1) {
+                                                                    statusText = "🏆 Winner";
+                                                                    statusColor = "#fbbf24"; // Gold
+                                                                } else if (c.rank === 2) {
+                                                                    statusText = "🥈 Runner Up";
+                                                                    statusColor = "var(--text-secondary)";
+                                                                } else {
+                                                                    statusText = "Lost";
+                                                                    statusColor = "#ef4444"; // Red
+                                                                }
+                                                            }
 
-                                                                return (
-                                                                    <tr key={c.candidate_id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                                                                        <td style={{ padding: '8px', color: 'var(--text-main)', fontWeight: '500' }}>{c.name}</td>
-                                                                        <td style={{ padding: '8px', textAlign: 'center', fontWeight: 'bold', color: 'var(--text-main)' }}>{c.votes}</td>
-                                                                        <td style={{ padding: '8px', textAlign: 'center', color: 'var(--text-secondary)' }}>#{c.rank}</td>
-                                                                        <td style={{ padding: '8px', color: statusColor, fontWeight: 'bold', fontSize: '0.85rem' }}>{statusText}</td>
-                                                                    </tr>
-                                                                );
-                                                            })}
-                                                        </tbody>
-                                                    </table>
-                                                </div>
+                                                            return (
+                                                                <tr key={c.candidate_id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                                                    <td style={{ padding: '8px', color: 'var(--text-main)', fontWeight: '500' }}>{c.name}</td>
+                                                                    <td style={{ padding: '8px', textAlign: 'center', fontWeight: 'bold', color: 'var(--text-main)' }}>{c.votes}</td>
+                                                                    <td style={{ padding: '8px', textAlign: 'center', color: 'var(--text-secondary)' }}>#{c.rank}</td>
+                                                                    <td style={{ padding: '8px', color: statusColor, fontWeight: 'bold', fontSize: '0.85rem' }}>{statusText}</td>
+                                                                </tr>
+                                                            );
+                                                        })}
+                                                    </tbody>
+                                                </table>
                                             </div>
                                         </div>
                                     )}
                                 </div>
                             );
                         })}
+
                     </div>
                 </div>
             )}
+
 
             {/* CONTROLS */}
             <div className="glass-card-premium" style={{ padding: '20px', marginTop: '20px', display: 'flex', gap: '20px', alignItems: 'center', flexWrap: 'wrap', background: 'var(--glass-bg)', border: '1px solid var(--glass-border)' }}>
@@ -327,7 +328,7 @@ const ElectionResults = () => {
                                         {groupResults.map((election, idx) => (
                                             <div key={`${electionId}-${idx}`} style={{ border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '15px' }}>
                                                 <h3 style={{ margin: '0 0 15px 0', color: '#fbbf24', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '10px' }}>
-                                                    {election.title}
+                                                    {election.title} <span style={{ fontSize: '0.8rem', color: 'white', background: '#333', padding: '2px 5px', borderRadius: '4px' }}>{election.status}</span>
                                                 </h3>
 
                                                 {/* FULL TABLE */}
@@ -346,15 +347,26 @@ const ElectionResults = () => {
                                                                 let statusText = "-";
                                                                 let statusColor = "var(--text-secondary)";
 
-                                                                if (c.rank === 1) {
-                                                                    statusText = "🏆 Winner";
-                                                                    statusColor = "#fbbf24";
-                                                                } else if (c.rank === 2) {
-                                                                    statusText = "🥈 Runner Up";
-                                                                    statusColor = "var(--text-secondary)";
+                                                                if (election.status === 'ONGOING') {
+                                                                    if (c.rank === 1) {
+                                                                        statusText = "Leading"; // Simplified since we don't calculate margins here yet
+                                                                        statusColor = "#10b981";
+                                                                    } else {
+                                                                        statusText = "Trailing";
+                                                                        statusColor = "#f59e0b";
+                                                                    }
                                                                 } else {
-                                                                    statusText = "Lost";
-                                                                    statusColor = "#ef4444";
+                                                                    // COMPLETED
+                                                                    if (c.rank === 1) {
+                                                                        statusText = "🏆 Winner";
+                                                                        statusColor = "#fbbf24";
+                                                                    } else if (c.rank === 2) {
+                                                                        statusText = "🥈 Runner Up";
+                                                                        statusColor = "var(--text-secondary)";
+                                                                    } else {
+                                                                        statusText = "Lost";
+                                                                        statusColor = "#ef4444";
+                                                                    }
                                                                 }
 
                                                                 return (
@@ -391,7 +403,7 @@ const ElectionResults = () => {
                     animation: blink 1s infinite; display: inline-block;
                 }
             `}</style>
-        </div>
+        </div >
     );
 };
 

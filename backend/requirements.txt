@@ -8,3 +8,5 @@ werkzeug
 pandas
 openpyxl
 Flask-Mail
+scikit-learn
+numpy

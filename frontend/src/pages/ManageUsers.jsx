@@ -72,6 +72,19 @@ const ManageUsers = () => {
         }
     };
 
+    const handleRoleUpdate = async (id, newRole) => {
+        if (!window.confirm(`Are you sure you want to change this user's role to ${newRole.toUpperCase()}?`)) return;
+
+        try {
+            await api.put(`/users/${id}/role`, { role: newRole });
+            // Update local state
+            setUsers(prev => prev.map(u => u.student_id === id ? { ...u, role: newRole } : u));
+            alert(`User role updated to ${newRole.toUpperCase()}`);
+        } catch (err) {
+            alert(err.response?.data?.error || "Failed to update role");
+        }
+    };
+
     const handleFileChange = (e) => {
         setFile(e.target.files[0]);
         setLog(null);
@@ -218,7 +231,79 @@ const ManageUsers = () => {
                                             <td style={{ padding: '15px' }}>{user.course}</td>
                                             <td style={{ padding: '15px' }}>{user.batch}</td>
                                             <td style={{ padding: '15px' }}>{user.semester}</td>
-                                            <td style={{ padding: '15px' }}>
+                                            <td style={{ padding: '15px', display: 'flex', gap: '10px' }}>
+                                                {/* PROMOTE/DEMOTE BUTTONS */}
+                                                {user.role === 'student' && (
+                                                    <button
+                                                        onClick={() => handleRoleUpdate(user.student_id, "cr")}
+                                                        style={{
+                                                            background: 'rgba(16, 185, 129, 0.1)',
+                                                            color: '#10b981',
+                                                            border: '1px solid #10b981',
+                                                            padding: '6px 12px',
+                                                            borderRadius: '6px',
+                                                            cursor: 'pointer',
+                                                            fontSize: '0.8rem',
+                                                            fontWeight: 'bold'
+                                                        }}
+                                                    >
+                                                        ▲ Promote to CR
+                                                    </button>
+                                                )}
+                                                {user.role === 'cr' && (
+                                                    <div style={{ display: 'flex', gap: '5px' }}>
+                                                        <select
+                                                            onChange={(e) => {
+                                                                if (e.target.value) handleRoleUpdate(user.student_id, e.target.value);
+                                                                e.target.value = ""; // Reset
+                                                            }}
+                                                            style={{
+                                                                background: 'rgba(245, 158, 11, 0.1)',
+                                                                color: '#f59e0b',
+                                                                border: '1px solid #f59e0b',
+                                                                padding: '6px',
+                                                                borderRadius: '6px',
+                                                                cursor: 'pointer',
+                                                                fontSize: '0.8rem',
+                                                                fontWeight: 'bold'
+                                                            }}
+                                                        >
+                                                            <option value="">⚡ Manage Role</option>
+                                                            <option value="student">▼ Demote to Student</option>
+                                                            <option disabled>--- Council ---</option>
+                                                            <option value="vice_president">▲ Promote to Vice President</option>
+                                                            <option value="secretary">▲ Promote to Secretary</option>
+                                                            <option value="joint_secretary">▲ Promote to Joint Secretary</option>
+                                                        </select>
+                                                    </div>
+                                                )}
+
+                                                {/* COUNCIL MEMBERS: Demote Options */}
+                                                {["president", "vice_president", "secretary", "joint_secretary"].includes(user.role) && (
+                                                    <div style={{ display: 'flex', gap: '5px' }}>
+                                                        <select
+                                                            onChange={(e) => {
+                                                                if (e.target.value) handleRoleUpdate(user.student_id, e.target.value);
+                                                                e.target.value = "";
+                                                            }}
+                                                            style={{
+                                                                background: 'rgba(236, 72, 153, 0.1)',
+                                                                color: '#ec4899',
+                                                                border: '1px solid #ec4899',
+                                                                padding: '6px',
+                                                                borderRadius: '6px',
+                                                                cursor: 'pointer',
+                                                                fontSize: '0.8rem',
+                                                                fontWeight: 'bold'
+                                                            }}
+                                                        >
+                                                            <option value="">⚡ Manage Council</option>
+                                                            <option value="cr">▼ Demote to CR</option>
+                                                            <option value="student">▼ Demote to Student</option>
+                                                        </select>
+                                                    </div>
+                                                )}
+
                                                 <button
                                                     className="delete-btn"
                                                     onClick={() => handleDelete(user.student_id)}
@@ -228,7 +313,8 @@ const ManageUsers = () => {
                                                         border: '1px solid #ef4444',
                                                         padding: '6px 12px',
                                                         borderRadius: '6px',
-                                                        cursor: 'pointer'
+                                                        cursor: 'pointer',
+                                                        fontSize: '0.8rem'
                                                     }}
                                                 >
                                                     Delete

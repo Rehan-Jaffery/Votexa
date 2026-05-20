@@ -132,3 +132,41 @@ class Vote(db.Model):
         db.DateTime,
         default=datetime.utcnow
     )
+
+
+# =========================
+# ANNOUNCEMENT (NOTICE BOARD)
+# =========================
+class Announcement(db.Model):
+    __tablename__ = "announcements"
+
+    id = db.Column(db.Integer, primary_key=True)
+    sender_id = db.Column(db.Integer, db.ForeignKey("students.student_id"), nullable=False)
+    
+    title = db.Column(db.String(200), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    
+    # Audience Scope
+    # GOV_INTERNAL = Visible to Council + CRs
+    # CLASS = Visible to specific Class (Course + Batch + Semester)
+    # ALL = Global (reserved for Admin/Principal later)
+    audience_scope = db.Column(
+        db.Enum("GOV_INTERNAL", "CLASS", "ALL"),
+        nullable=False,
+        default="CLASS"
+    )
+    
+    # Targeting (For CLASS scope)
+    target_course = db.Column(db.String(50), nullable=True)
+    target_batch = db.Column(db.String(10), nullable=True)
+    target_semester = db.Column(db.String(10), nullable=True)
+    
+    priority = db.Column(
+        db.Enum("NORMAL", "URGENT"),
+        default="NORMAL"
+    )
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationship
+    sender = db.relationship("Student", backref="sent_announcements")

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { getActiveElections, getCandidates, castVote } from '../services/electionService';
+import { toast } from 'react-hot-toast';
 import './VotePage.css';
 
 const VotePage = () => {
@@ -24,6 +25,7 @@ const VotePage = () => {
         } catch (err) {
             console.error(err);
             setError("Failed to load elections.");
+            toast.error("Failed to load elections");
         } finally {
             setLoading(false);
         }
@@ -38,7 +40,7 @@ const VotePage = () => {
             setCandidates(data);
         } catch (err) {
             console.error(err);
-            alert("Failed to load candidates");
+            toast.error("Failed to load candidates");
         }
     };
 
@@ -47,15 +49,18 @@ const VotePage = () => {
         setVoting(true);
         try {
             await castVote(selectedElection.election_id, selectedCandidate.candidate_id);
-            alert("Vote Cast Successfully! 🎉");
+            toast.success("Vote Cast Successfully! 🎉");
             setSelectedElection(null); // Close modal
+            // Optionally refresh results or disable voting for this election? 
+            // For now, simple success.
         } catch (err) {
             console.error(err);
-            alert(err.response?.data?.error || "Failed to cast vote.");
+            toast.error(err.response?.data?.error || "Failed to cast vote.");
         } finally {
             setVoting(false);
         }
     };
+
 
     if (loading) return <div style={{ padding: '40px', textAlign: 'center' }}>Loading Elections...</div>;
     if (error) return <div className="error-text">{error}</div>;
@@ -128,6 +133,12 @@ const VotePage = () => {
                                             <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
                                                 {candidate.course} - {candidate.batch}
                                             </span>
+                                            {selectedCandidate?.candidate_id === candidate.candidate_id && candidate.manifesto && (
+                                                <div style={{ marginTop: '12px', padding: '12px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', fontSize: '0.9rem', color: 'var(--text-main)', borderLeft: '3px solid var(--primary-color)' }}>
+                                                    <strong style={{ display: 'block', marginBottom: '4px', color: 'var(--primary-color)' }}>Manifesto:</strong>
+                                                    {candidate.manifesto}
+                                                </div>
+                                            )}
                                         </div>
                                         {selectedCandidate?.candidate_id === candidate.candidate_id && (
                                             <span style={{ color: 'var(--primary-color)', fontSize: '1.5rem' }}>✓</span>

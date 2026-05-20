@@ -12,6 +12,8 @@ import ApplyPage from "./pages/ApplyPage";
 import ManageElections from "./pages/ManageElections";
 import ManageApplications from "./pages/ManageApplications";
 import ElectionResults from "./pages/ElectionResults";
+import NoticesPage from "./pages/NoticesPage";
+import ClassStats from "./pages/ClassStats";
 
 function App() {
   return (
@@ -27,9 +29,11 @@ function App() {
         <Route path="profile" element={<Profile />} />
         <Route path="vote" element={<VotePage />} />
         <Route path="elections" element={<ManageElections />} />
-        <Route path="class-stats" element={<div>Class Stats (Coming Soon)</div>} />
+        <Route path="class-stats" element={<ClassStats />} />
         <Route path="apply" element={<ApplyPage />} />
+        <Route path="notices" element={<NoticesPage />} />
         <Route path="applications" element={<ManageApplications />} />
+
         <Route path="results" element={<ElectionResults />} />
       </Route>
     </Routes>
